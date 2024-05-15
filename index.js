@@ -30,7 +30,7 @@ const client = new MongoClient(uri, {
 });
 
 // middleware
-const logger = (req, res, next) =>{
+const logger = (req, res, next) => {
     console.log("log info", req.method, req.url);
     next();
 }
@@ -39,13 +39,13 @@ const logger = (req, res, next) =>{
 const verifyToken = (req, res, next) => {
     const token = req?.cookies?.token;
     console.log("token in the middle", token);
-    if(!token){
-        return res.status(401).send({message: "unauthorized access"})
+    if (!token) {
+        return res.status(401).send({ message: "unauthorized access" })
     }
     // verifying the token using jwt library
-    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) =>{
-        if(error){
-            return res.status(401).send({message: "unauthorized access"})
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        if (error) {
+            return res.status(401).send({ message: "unauthorized access" })
         }
         req.user = decoded;
         next()
@@ -79,12 +79,23 @@ async function run() {
         app.post('/logout', async (req, res) => {
             const user = req.body;
             console.log("logout user", user);
-            res.clearCookie("token", { ...tokenOption, maxAge: 0 }).send({success: true})
+            res.clearCookie("token", { ...tokenOption, maxAge: 0 }).send({ success: true })
         })
 
         // Service related API
         app.get('/services', async (req, res) => {
-            const curser = servicesCollection.find();
+            const filter = req.query;
+            // console.log(filter);
+            const query = {
+                // price: { $lt: 100 }
+                title: {$regex: filter.search, $options: 'i'}
+            }
+            const options = {
+                sort: {
+                    price: filter.sort === 'asy' ? 1 : -1
+                }
+            }
+            const curser = servicesCollection.find(query, options);
             const result = await curser.toArray();
             res.send(result);
 
@@ -107,8 +118,8 @@ async function run() {
             console.log(req.query.email);
             // console.log("cook cookie", req.cookies);
             console.log("token owner info", req.user);
-            if(req.user.email !== req.query.email){
-                return res.status(403).send({message: "forbidden access"})
+            if (req.user.email !== req.query.email) {
+                return res.status(403).send({ message: "forbidden access" })
             }
 
             let query = {};
